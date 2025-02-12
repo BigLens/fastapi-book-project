@@ -6,7 +6,7 @@ def test_get_all_books():
     assert response.status_code == 200
     assert len(response.json()) == 3
 
-    def test_intentional_failure():
+def test_intentional_failure():
      assert 1 == 2  # This will fail
 
 
