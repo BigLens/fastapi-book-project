@@ -1,0 +1,44 @@
+name: CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install rsync on VPS
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/vps_key ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} 'sudo apt update && sudo apt install -y rsync'
+
+      - name: Copy files to VPS
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/vps_key ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} 'mkdir -p ~/fastapi_app'
+          rsync -avz -e "ssh -i ~/.ssh/vps_key" . ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }}:~/fastapi_app
+
+      - name: Install dependencies on VPS
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/vps_key ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} 'cd ~/fastapi_app && python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt'
+
+      - name: Install Gunicorn on VPS
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/vps_key ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} 'source ~/fastapi_app/venv/bin/activate && pip install gunicorn'
+
+      - name: Start or Restart FastAPI with Gunicorn
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/vps_key ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} 'cd ~/fastapi_app && source venv/bin/activate && nohup gunicorn main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000 &'
+
+      - name: Restart Nginx
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/vps_key ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} 'sudo systemctl restart nginx'
