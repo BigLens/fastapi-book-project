@@ -29,6 +29,15 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKER_USERNAME }}/fastapi_app:latest
 
+      - name: Create SSH key file
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/vps_key
+          chmod 600 ~/.ssh/vps_key
+
+      - name: Add known hosts
+        run: ssh-keyscan -H ${{ secrets.VPS_IP }} >> ~/.ssh/known_hosts
+
       - name: SSH into VPS and Deploy Container
         run: |
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/vps_key ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} << 'EOF'
