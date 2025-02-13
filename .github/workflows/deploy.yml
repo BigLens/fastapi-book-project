@@ -41,8 +41,9 @@ jobs:
       - name: SSH into VPS and Deploy Container
         run: |
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/vps_key ${{ secrets.VPS_USER }}@${{ secrets.VPS_IP }} << 'EOF'
-            docker pull ${{ secrets.DOCKER_USERNAME }}/fastapi_app:latest
-            docker stop fastapi_app || true
-            docker rm fastapi_app || true
-            docker run -d --name fastapi_app -p 8000:8000 ${{ secrets.DOCKER_USERNAME }}/fastapi_app:latest
+            cd ~/fastapi-book-project
+            git pull origin main
+            docker compose down
+            docker compose pull
+            docker compose up -d --build
           EOF
